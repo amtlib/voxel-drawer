@@ -1,0 +1,23 @@
+normal
+button voxel
+orange
+
+
+[
+	['typ', x, y, z]
+]
+
+sterowanie kamera
+
+
+pod³oga:
+szara, obramówka ciemna
+
+kostka do przenoszenia, wyró¿nia sie
+
+przycisk wypuk³y, po wejœciu obni¿a sie
+
+wyjscie
+
+
+zeby bylo wiadomo gdzie patrzy player
