@@ -107,11 +107,11 @@ function init() {
     // cubes
 
     cubeGeo = new THREE.BoxGeometry(50, 50, 50);
-    cubeMaterial = new THREE.MeshLambertMaterial({ color: 0xfeb74c, map: new THREE.TextureLoader().load("textures/square-outline-textured.png") });
+    //cubeMaterial = new THREE.MeshLambertMaterial({ color: 0xfeb74c, map: new THREE.TextureLoader().load("textures/square-outline-textured.png") });
 
     // grid
 
-    var size = 500, step = 50;
+    var size = 1000, step = 50;
 
     var geometry = new THREE.Geometry();
 
@@ -129,13 +129,14 @@ function init() {
 
     var line = new THREE.LineSegments(geometry, material);
     scene.add(line);
-
+    // floor
+    generateFloor(size, step)
     //
 
     raycaster = new THREE.Raycaster();
     mouse = new THREE.Vector2();
 
-    var geometry = new THREE.PlaneBufferGeometry(1000, 1000);
+    var geometry = new THREE.PlaneBufferGeometry(size * 2, size * 2);
     geometry.rotateX(- Math.PI / 2);
 
     plane = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({ visible: false }));
@@ -270,6 +271,21 @@ function onDocumentKeyUp(event) {
 
     }
 
+}
+
+function generateFloor(size, step) {
+    for (let i = -size / step; i < size / step; i++) {
+        for (let j = -size / step; j < size / step; j++) {
+            var voxel = new THREE.Mesh(cubeGeo, materials['block']);
+            voxel.position.x = i*step+step/2
+            voxel.position.y = step/2
+            voxel.position.z = j*step+step/2
+            scene.add(voxel);
+            voxel.userData = { type: 'block', material: 'block' }
+            objects.push(voxel);
+            
+        }
+    }
 }
 
 function render() {
