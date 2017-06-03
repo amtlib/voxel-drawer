@@ -12,6 +12,7 @@ var cubeGeo, cubeMaterial;
 
 var selectedBlock = 'block';
 var selectedMaterial = 'block';
+var placed_players = 0
 
 var materials = {
     block: new THREE.MeshLambertMaterial({ color: 0xfeb74c, map: new THREE.TextureLoader().load('gfx/materials/normal.png') }),
@@ -32,8 +33,14 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('get_json').addEventListener('click', () => {
         if (document.getElementById('json_code').style.display == 'none') {
             let temp_array = []
+            let temp_players_count = 0;
             for (let i = 1; i < objects.length; i++) {
-                temp_array.push([objects[i].userData.type, [objects[i].position.x / 50 + .5, objects[i].position.y / 50 + .5, objects[i].position.z / 50 + .5], [1,1,1], objects[i].userData.material])
+                if (objects[i].userData.type == 'player') {
+                    temp_array.push([objects[i].userData.type, [objects[i].position.x / 50 + .5, objects[i].position.y / 50 + .5, objects[i].position.z / 50 + .5], temp_players_count++])
+                } else {
+                    temp_array.push([objects[i].userData.type, [objects[i].position.x / 50 + .5, objects[i].position.y / 50 + .5, objects[i].position.z / 50 + .5], [1, 1, 1], objects[i].userData.material])
+                }
+
             }
             document.querySelector('#json_code textarea').value = JSON.stringify(temp_array, null, 4);
             document.getElementById('json_code').style.display = 'block'
@@ -58,7 +65,7 @@ document.addEventListener('DOMContentLoaded', function () {
     })
     document.getElementById('player_voxel').addEventListener('click', function () {
         selectedMaterial = 'player'
-        selectedBlock= 'player'
+        selectedBlock = 'player'
     })
 
 
@@ -213,7 +220,9 @@ function onDocumentMouseDown(event) {
         if (isShiftDown) {
 
             if (intersect.object != plane) {
-
+                if (intersect.object.userData.type == 'player') {
+                    placed_players--;
+                }
                 scene.remove(intersect.object);
 
                 objects.splice(objects.indexOf(intersect.object), 1);
@@ -223,13 +232,18 @@ function onDocumentMouseDown(event) {
             // create cube
 
         } else {
+            if (selectedBlock != 'player' || (selectedBlock == 'player' && placed_players < 3)) {
+                if (selectedBlock == 'player') {
+                    placed_players++;
+                }
+                var voxel = new THREE.Mesh(cubeGeo, materials[selectedMaterial]);
+                voxel.position.copy(intersect.point).add(intersect.face.normal);
+                voxel.position.divideScalar(50).floor().multiplyScalar(50).addScalar(25);
+                scene.add(voxel);
+                voxel.userData = { type: selectedBlock, material: selectedMaterial }
+                objects.push(voxel);
+            }
 
-            var voxel = new THREE.Mesh(cubeGeo, materials[selectedMaterial]);
-            voxel.position.copy(intersect.point).add(intersect.face.normal);
-            voxel.position.divideScalar(50).floor().multiplyScalar(50).addScalar(25);
-            scene.add(voxel);
-            voxel.userData = { type: selectedBlock, material: selectedMaterial }
-            objects.push(voxel);
         }
 
         render();
