@@ -15,10 +15,10 @@ var selectedMaterial = 'block';
 var placed_players = 0
 
 var materials = {
-    block: new THREE.MeshLambertMaterial({ color: 0xfeb74c, map: new THREE.TextureLoader().load('gfx/materials/normal.png') }),
-    jumping: new THREE.MeshLambertMaterial({ color: 0xfeb74c, map: new THREE.TextureLoader().load('gfx/materials/jumping.png') }),
-    button: new THREE.MeshLambertMaterial({ color: 0xfeb74c, map: new THREE.TextureLoader().load('gfx/materials/button.png') }),
-    player: new THREE.MeshLambertMaterial({ color: 0xfeb74c, map: new THREE.TextureLoader().load('gfx/materials/player.png') }),
+    block: new THREE.MeshLambertMaterial({ map: new THREE.TextureLoader().load('gfx/materials/normal.png') }),
+    jumping: new THREE.MeshLambertMaterial({ map: new THREE.TextureLoader().load('gfx/materials/jumping.png') }),
+    button: new THREE.MeshLambertMaterial({ map: new THREE.TextureLoader().load('gfx/materials/button.png') }),
+    player: new THREE.MeshLambertMaterial({ map: new THREE.TextureLoader().load('gfx/materials/player.png') }),
 }
 
 var output_code_array = []
@@ -107,6 +107,7 @@ function init() {
     // cubes
 
     cubeGeo = new THREE.BoxGeometry(50, 50, 50);
+    jumpingGeo = new THREE.BoxGeometry(50, 5, 50);
     //cubeMaterial = new THREE.MeshLambertMaterial({ color: 0xfeb74c, map: new THREE.TextureLoader().load("textures/square-outline-textured.png") });
 
     // grid
@@ -237,7 +238,12 @@ function onDocumentMouseDown(event) {
                 if (selectedBlock == 'player') {
                     placed_players++;
                 }
-                var voxel = new THREE.Mesh(cubeGeo, materials[selectedMaterial]);
+                if (selectedBlock == 'jumping') {
+                    var voxel = new THREE.Mesh(jumpingGeo, materials[selectedMaterial]);
+                } else {
+                    var voxel = new THREE.Mesh(cubeGeo, materials[selectedMaterial]);
+                }
+
                 voxel.position.copy(intersect.point).add(intersect.face.normal);
                 voxel.position.divideScalar(50).floor().multiplyScalar(50).addScalar(25);
                 scene.add(voxel);
@@ -277,13 +283,13 @@ function generateFloor(size, step) {
     for (let i = -size / step; i < size / step; i++) {
         for (let j = -size / step; j < size / step; j++) {
             var voxel = new THREE.Mesh(cubeGeo, materials['block']);
-            voxel.position.x = i*step+step/2
-            voxel.position.y = step/2
-            voxel.position.z = j*step+step/2
+            voxel.position.x = i * step + step / 2
+            voxel.position.y = step / 2
+            voxel.position.z = j * step + step / 2
             scene.add(voxel);
             voxel.userData = { type: 'block', material: 'block' }
             objects.push(voxel);
-            
+
         }
     }
 }
