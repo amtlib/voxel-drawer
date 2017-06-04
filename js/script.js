@@ -1,5 +1,5 @@
 
-
+var size = 1000, step = 50;
 if (!Detector.webgl) Detector.addGetWebGLMessage();
 
 var container;
@@ -112,7 +112,7 @@ function init() {
 
     // grid
 
-    var size = 1000, step = 50;
+
 
     var geometry = new THREE.Geometry();
 
@@ -248,6 +248,9 @@ function onDocumentMouseDown(event) {
                 voxel.position.divideScalar(50).floor().multiplyScalar(50).addScalar(25);
                 scene.add(voxel);
                 voxel.userData = { type: selectedBlock, material: selectedMaterial }
+                if (selectedBlock == 'jumping') {
+                    voxel.position.y =voxel.position.y - step / 2 + step / 10
+                }
                 objects.push(voxel);
             }
 
