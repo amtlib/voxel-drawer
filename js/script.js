@@ -131,7 +131,7 @@ function init() {
     scene.add(axis)
 
     cubeGeo = new THREE.BoxGeometry(50, 50, 50);
-    
+
     var geometry = new THREE.Geometry();
 
     for (var i = - size; i <= size; i += step) {
@@ -252,6 +252,14 @@ function onDocumentMouseDown(event) {
             if (block_type != 'player' || (block_type == 'player' && placed_players < 3)) {
                 if (block_type == 'player') {
                     placed_players++;
+
+                    var voxel = new THREE.Mesh(cubeGeo.clone(), materials['player']);
+                    voxel.position.copy(intersect.point).add(intersect.face.normal);
+                    voxel.position.divideScalar(50).floor().multiplyScalar(50).addScalar(25);
+                    scene.add(voxel);
+                    voxel.userData = { type: block_type, material: material_type }
+                    objects.push(voxel);
+                    return;
                 }
 
                 var voxel = new THREE.Mesh(cubeGeo.clone(), materials[material_type]);
