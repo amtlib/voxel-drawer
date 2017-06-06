@@ -1,5 +1,5 @@
 
-var size = 1000, step = 50;
+var size = 900, step = 50;
 if (!Detector.webgl) Detector.addGetWebGLMessage();
 
 var container;
@@ -10,9 +10,22 @@ var mouse, raycaster, isShiftDown = false;
 var rollOverMesh, rollOverMaterial;
 var cubeGeo, cubeMaterial;
 
-var selectedBlock = 'block';
-var selectedMaterial = 'block';
-var placed_players = 0
+
+var placed_players = 0;
+
+var block_type = 'block';
+var material_type = 'block';
+var block_h = 1;
+
+var camera_down = false;
+var camera_up = false;
+var camera_left = false;
+var camera_right = false;
+var camera_rotate_right = false;
+var camera_rotate_left = false;
+
+var plane_size_range;
+
 
 var materials = {
     block: new THREE.MeshLambertMaterial({ map: new THREE.TextureLoader().load('gfx/materials/normal.png') }),
@@ -24,49 +37,69 @@ var materials = {
 var output_code_array = []
 
 var objects = [];
-document.addEventListener('DOMContentLoaded', function () {
-    init();
-    render();
-    document.getElementById('json_code').style.display = 'none'
 
-    //display json window
-    document.getElementById('get_json').addEventListener('click', () => {
+var editorGUI = function () {
+
+    this.plane_size = 30;
+
+    this.get_json = function () {
         if (document.getElementById('json_code').style.display == 'none') {
             let temp_array = []
             let temp_players_count = 0;
             for (let i = 1; i < objects.length; i++) {
                 if (objects[i].userData.type == 'player') {
-                    temp_array.push([objects[i].userData.type, [objects[i].position.x / 50 + .5, objects[i].position.y / 50 + .5, objects[i].position.z / 50 + .5], temp_players_count++])
+                    temp_array.push([objects[i].userData.type, [objects[i].position.x / step + .5, objects[i].position.y / step + .5, objects[i].position.z / step + .5], temp_players_count++])
                 } else {
-                    temp_array.push([objects[i].userData.type, [objects[i].position.x / 50 + .5, objects[i].position.y / 50 + .5, objects[i].position.z / 50 + .5], [1, 1, 1], objects[i].userData.material])
+                    temp_array.push([objects[i].userData.type, [objects[i].position.x / step + .5, objects[i].position.y / step + .5, objects[i].position.z / step + .5], [objects[i].scale.x, objects[i].scale.y, objects[i].scale.z], objects[i].userData.material])
                 }
-
             }
             document.querySelector('#json_code textarea').value = JSON.stringify(temp_array, null, 4);
             document.getElementById('json_code').style.display = 'block'
         } else {
             document.getElementById('json_code').style.display = 'none'
         }
+    };
+
+    this.material = 'block';
+    this.block_type = 'block';
+    this.block_h = 1;
+};
+
+document.addEventListener('DOMContentLoaded', function () {
+    init();
+    render();
+
+    document.getElementById('json_code').style.display = 'none'
+
+    var text = new editorGUI();
+    var gui = new dat.GUI();
+    plane_size_range = gui.add(text, 'plane_size', 1, 30).step(1);
+    plane_size_range.onChange(function (value) {
+        let temp_size = value * value
+        temp_size /= 100;
+        temp_size = Math.floor(temp_size)
+        temp_size *= 100;
+
+        for (let i = 0; i < objects.length; i++) {
+            if (objects[i].userData.partOfFloor == true) {
+                scene.remove(objects[i])
+                objects.splice(i--, 1)
+            }
+        }
+        generateFloor(temp_size, step)
     })
 
-    //select materials
-    document.getElementById('block_voxel').addEventListener('click', function () {
-        selectedMaterial = 'block'
-        selectedBlock = 'block'
-    })
 
-    document.getElementById('button_voxel').addEventListener('click', function () {
-        selectedMaterial = 'button'
-        selectedBlock = 'button'
-    })
-    document.getElementById('jumping_voxel').addEventListener('click', function () {
-        selectedMaterial = 'jumping'
-        selectedBlock = 'jumping'
-    })
-    document.getElementById('player_voxel').addEventListener('click', function () {
-        selectedMaterial = 'player'
-        selectedBlock = 'player'
-    })
+    gui.add(text, 'get_json');
+    gui.add(text, 'block_type', ['block', 'jumping', 'button', 'player']).onChange(function (value) {
+        block_type = value;
+    });
+    gui.add(text, 'block_h').min(0).max(1).step(.1).onChange(function (value) {
+        block_h = value;
+    });
+    gui.add(text, 'material', ['block', 'jumping', 'button']).onChange(function (value) {
+        material_type = value;
+    });
 
 
     //camera controller
@@ -80,16 +113,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
 function init() {
 
-    container = document.createElement('div');
-    document.body.appendChild(container);
+    container = document.getElementById('container');
 
-    //var info = document.createElement('div');
-    //info.style.position = 'absolute';
-    //info.style.top = '10px';
-    //info.style.width = '100%';
-    //info.style.textAlign = 'center';
-    //info.innerHTML = '<a href="http://threejs.org" target="_blank">three.js</a> - voxel painter - webgl<br><strong>click</strong>: add voxel, <strong>shift + click</strong>: remove voxel';
-    //container.appendChild(info);
 
     camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 10000);
     camera.position.set(500, 800, 1300);
@@ -97,23 +122,16 @@ function init() {
 
     scene = new THREE.Scene();
 
-    // roll-over helpers
-
     rollOverGeo = new THREE.BoxGeometry(50, 50, 50);
     rollOverMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000, opacity: 0.5, transparent: true });
     rollOverMesh = new THREE.Mesh(rollOverGeo, rollOverMaterial);
     scene.add(rollOverMesh);
 
-    // cubes
+    var axis = new THREE.AxisHelper(500);
+    scene.add(axis)
 
     cubeGeo = new THREE.BoxGeometry(50, 50, 50);
-    jumpingGeo = new THREE.BoxGeometry(50, 5, 50);
-    //cubeMaterial = new THREE.MeshLambertMaterial({ color: 0xfeb74c, map: new THREE.TextureLoader().load("textures/square-outline-textured.png") });
-
-    // grid
-
-
-
+    
     var geometry = new THREE.Geometry();
 
     for (var i = - size; i <= size; i += step) {
@@ -130,9 +148,9 @@ function init() {
 
     var line = new THREE.LineSegments(geometry, material);
     scene.add(line);
+
     // floor
     generateFloor(size, step)
-    //
 
     raycaster = new THREE.Raycaster();
     mouse = new THREE.Vector2();
@@ -145,8 +163,8 @@ function init() {
 
     objects.push(plane);
 
-    // Lights
 
+    // Lights
     var ambientLight = new THREE.AmbientLight(0x606060);
     scene.add(ambientLight);
 
@@ -160,15 +178,14 @@ function init() {
     renderer.setSize(window.innerWidth, window.innerHeight);
     container.appendChild(renderer.domElement);
 
-    document.addEventListener('mousemove', onDocumentMouseMove, false);
-    document.addEventListener('mousedown', onDocumentMouseDown, false);
+    document.getElementById('container').addEventListener('mousemove', onDocumentMouseMove, false);
+    document.getElementById('container').addEventListener('mousedown', onDocumentMouseDown, false);
     document.addEventListener('keydown', onDocumentKeyDown, false);
     document.addEventListener('keyup', onDocumentKeyUp, false);
 
-    //
-
     window.addEventListener('resize', onWindowResize, false);
 
+    render();
 }
 
 function onWindowResize() {
@@ -198,8 +215,6 @@ function onDocumentMouseMove(event) {
         rollOverMesh.position.divideScalar(50).floor().multiplyScalar(50).addScalar(25);
 
     }
-
-    render();
 
 }
 
@@ -234,22 +249,19 @@ function onDocumentMouseDown(event) {
             // create cube
 
         } else {
-            if (selectedBlock != 'player' || (selectedBlock == 'player' && placed_players < 3)) {
-                if (selectedBlock == 'player') {
+            if (block_type != 'player' || (block_type == 'player' && placed_players < 3)) {
+                if (block_type == 'player') {
                     placed_players++;
                 }
-                if (selectedBlock == 'jumping') {
-                    var voxel = new THREE.Mesh(jumpingGeo, materials[selectedMaterial]);
-                } else {
-                    var voxel = new THREE.Mesh(cubeGeo, materials[selectedMaterial]);
-                }
 
+                var voxel = new THREE.Mesh(cubeGeo.clone(), materials[material_type]);
+                voxel.scale.y = block_h
                 voxel.position.copy(intersect.point).add(intersect.face.normal);
                 voxel.position.divideScalar(50).floor().multiplyScalar(50).addScalar(25);
                 scene.add(voxel);
-                voxel.userData = { type: selectedBlock, material: selectedMaterial }
-                if (selectedBlock == 'jumping') {
-                    voxel.position.y =voxel.position.y - step / 2 + step / 10
+                voxel.userData = { type: block_type, material: material_type }
+                if (block_h < 1) {
+                    voxel.position.y = voxel.position.y - step / 2 + step * block_h - step * block_h / 2
                 }
                 objects.push(voxel);
             }
@@ -263,11 +275,9 @@ function onDocumentMouseDown(event) {
 }
 
 function onDocumentKeyDown(event) {
-
+    console.log(event.keyCode)
     switch (event.keyCode) {
-
         case 16: isShiftDown = true; break;
-
     }
 
 }
@@ -275,9 +285,7 @@ function onDocumentKeyDown(event) {
 function onDocumentKeyUp(event) {
 
     switch (event.keyCode) {
-
         case 16: isShiftDown = false; break;
-
     }
 
 }
@@ -286,20 +294,18 @@ function generateFloor(size, step) {
     for (let i = -size / step; i < size / step; i++) {
         for (let j = -size / step; j < size / step; j++) {
             var voxel = new THREE.Mesh(cubeGeo, materials['block']);
-            voxel.position.x = i * step + step / 2
+            voxel.position.x = i * step + step / 2;
             voxel.position.y = step / 2
-            voxel.position.z = j * step + step / 2
+            voxel.position.z = j * step + step / 2;
             scene.add(voxel);
-            voxel.userData = { type: 'block', material: 'block' }
+            voxel.userData = { type: 'block', material: 'block', partOfFloor: true }
             objects.push(voxel);
-
         }
     }
 }
 
 function render() {
-
     renderer.render(scene, camera);
-
+    requestAnimationFrame(render)
 }
 
