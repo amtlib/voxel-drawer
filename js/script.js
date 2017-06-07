@@ -32,6 +32,7 @@ var materials = {
     jumping: new THREE.MeshLambertMaterial({ map: new THREE.TextureLoader().load('gfx/materials/jumping.png') }),
     button: new THREE.MeshLambertMaterial({ map: new THREE.TextureLoader().load('gfx/materials/button.png') }),
     player: new THREE.MeshLambertMaterial({ map: new THREE.TextureLoader().load('gfx/materials/player.png') }),
+    light: new THREE.MeshLambertMaterial({ map: new THREE.TextureLoader().load('gfx/materials/light.png') }),
 }
 
 var output_code_array = []
@@ -49,7 +50,9 @@ var editorGUI = function () {
             for (let i = 1; i < objects.length; i++) {
                 if (objects[i].userData.type == 'player') {
                     temp_array.push([objects[i].userData.type, [objects[i].position.x / step + .5, objects[i].position.y / step + .5, objects[i].position.z / step + .5], temp_players_count++])
-                } else {
+                } else if(objects[i].userData.type == 'light'){
+                    temp_array.push([objects[i].userData.type, [objects[i].position.x / step + .5, objects[i].position.y / step + .5, objects[i].position.z / step + .5]])
+                }else {
                     temp_array.push([objects[i].userData.type, [objects[i].position.x / step + .5, objects[i].position.y / step + .5, objects[i].position.z / step + .5], [objects[i].scale.x, objects[i].scale.y, objects[i].scale.z], objects[i].userData.material])
                 }
             }
@@ -91,7 +94,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
     gui.add(text, 'get_json');
-    gui.add(text, 'block_type', ['block', 'jumping', 'button', 'player']).onChange(function (value) {
+    gui.add(text, 'block_type', ['block', 'jumping', 'button', 'player', 'light']).onChange(function (value) {
         block_type = value;
     });
     gui.add(text, 'block_h').min(0).max(1).step(.1).onChange(function (value) {
@@ -250,10 +253,9 @@ function onDocumentMouseDown(event) {
 
         } else {
             if (block_type != 'player' || (block_type == 'player' && placed_players < 3)) {
-                if (block_type == 'player') {
+                if (block_type == 'player' || block_type == 'light') {
                     placed_players++;
-
-                    var voxel = new THREE.Mesh(cubeGeo.clone(), materials['player']);
+                    var voxel = new THREE.Mesh(cubeGeo.clone(), materials[block_type]);
                     voxel.position.copy(intersect.point).add(intersect.face.normal);
                     voxel.position.divideScalar(50).floor().multiplyScalar(50).addScalar(25);
                     scene.add(voxel);
