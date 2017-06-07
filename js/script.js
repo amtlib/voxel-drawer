@@ -52,7 +52,7 @@ var editorGUI = function () {
                     temp_array.push([objects[i].userData.type, [objects[i].position.x / step + .5, objects[i].position.y / step + .5, objects[i].position.z / step + .5], temp_players_count++])
                 } else if(objects[i].userData.type == 'light'){
                     temp_array.push([objects[i].userData.type, [objects[i].position.x / step + .5, objects[i].position.y / step + .5, objects[i].position.z / step + .5]])
-                }else {
+                }else if(objects[i].userData.type != null) {
                     temp_array.push([objects[i].userData.type, [objects[i].position.x / step + .5, objects[i].position.y / step + .5, objects[i].position.z / step + .5], [objects[i].scale.x, objects[i].scale.y, objects[i].scale.z], objects[i].userData.material])
                 }
             }
